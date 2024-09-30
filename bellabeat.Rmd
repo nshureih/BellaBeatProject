@@ -1,0 +1,430 @@
+---
+title: "Analysis on Health Data for Bellabeat"
+author: "Nadia Shureih"
+date: "2024-07-16"
+output:
+  html_document: default
+  pdf_document: default
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+### About Bellabeat
+
+Bellabeat is a self described "pioneer in the fem-tech realm." Focused
+on finding an intersection between women's wellness and women's fashion,
+the company works to aid women in tracking a myriad of personal health
+data. Although a small company, founder Urška Sršen believes that
+analyzing health fitness data could unlock new areas of growth for the
+company.
+
+### Business Task
+
+Analyze trends in health tracking smart device usage and provide
+recommendations and opportunity for growth.
+
+### Downloading Packages
+
+#### Importing Libraries
+
+```{r, echo=FALSE}
+library("here")
+library("skimr")
+library("janitor")
+library ("dplyr")
+library("tidyverse")
+library("ggplot2")
+library("kableExtra")
+library("knitr")
+```
+
+### Cleaning Data
+
+#### Taking a Look at the Data
+
+```{r}
+sleep <- read.csv('sleepDay_merged.csv')
+weight <- read.csv('weightLogInfo_merged.csv')
+daily_activity <-read.csv('dailyActivity_merged.csv')
+```
+
+```{r}
+head(sleep)
+head(weight)
+head(daily_activity)
+```
+
+#### Cleaning Duplicates
+
+```{r}
+sum(duplicated(daily_activity))
+sum(duplicated(sleep))
+sum(duplicated(weight))
+```
+
+```{r}
+daily_activity <- daily_activity %>%
+  distinct() %>%
+  drop_na()
+
+sleep <- sleep %>%
+  distinct() %>%
+  drop_na()
+```
+
+```{r}
+sum(duplicated(sleep))
+```
+
+#### Creating Cohesive Date Formatting
+
+```{r}
+daily_activity <- daily_activity %>% 
+  rename(Date = ActivityDate) %>% 
+  mutate(Date = as.Date(Date, format = "%m/%d/%y"))
+
+sleep <- sleep %>% 
+  rename(Date = SleepDay) %>% 
+  mutate(Date = as.Date(Date, format = "%m/%d/%y"))
+
+weight <- weight %>% 
+  select(-LogId) %>% 
+  mutate(Date=as.Date(Date, format = "%m/%d/%y")) %>% 
+  mutate(IsManualReport = as.factor(IsManualReport))
+```
+
+#### Cleaning Column Names
+
+```{r, results="hide"}
+clean_names(daily_activity)
+clean_names(sleep)
+clean_names(weight)
+```
+
+```{r}
+daily_activity <- rename_with(daily_activity, tolower)
+sleep <- rename_with(sleep, tolower)
+weight <- rename_with(weight, tolower)
+```
+### Summarizing the Datasets
+
+#### How many participants are in each dataset?
+
+I wanted to get an understanding of how big each dataset is before
+developing my analysis further and focusing in on the specifics.
+
+```{r}
+n_distinct(daily_activity$id)
+n_distinct(sleep$id)
+n_distinct(weight$id)
+```
+
+There are 35 participants in the activity data, 24 in the sleep data,
+and 8 in weight data.
+
+#### Getting a Summary of the Datasets
+
+##### Daily Activity Summaries
+
+```{r}
+daily_activity %>% 
+  select(totalsteps, veryactiveminutes, veryactivedistance, calories) %>% 
+  summary()
+```
+
+```{r}
+daily_activity %>% 
+  select(sedentaryminutes, sedentaryactivedistance, fairlyactiveminutes, moderatelyactivedistance, lightlyactiveminutes, lightactivedistance) %>% 
+  summary()
+```
+
+##### Some Conclusions from the Above Data
+
+The average steps is 6547 (compare with the recommended 10,000 steps per
+day). The average calories burned is 2189 (though this is wholy
+dependent on age and gender).
+
+Average amount of very active minutes is about 16.5, and very active
+distance is about 1.18m. Average amount of sedentary minutes is about
+995.3 Average amount of fairly active minutes is about 13.07, and
+moderately active distance is about 0.48m. Average amount of lightly
+active minutes is about 170.1, and very active distance is about 2.89m.
+
+People spend the most amount of time sedentary, and are able to complete
+more light activity next. People who complete light active are able to
+go longer distances For people who are active, they will probably spend
+more time in 'very active' than 'fairly active' meaning maybe they are
+working harder in those workouts.
+
+#### Sleep Summaries
+
+```{r}
+sleep %>% 
+  select(totalsleeprecords, totalminutesasleep, totaltimeinbed) %>% 
+  summary()
+```
+
+The average time asleep is 419.2 minutes or about 6.9 hours the average
+time in bed is 458.5 minutes or about 7.5 hours.
+
+#### Weight Summaries
+
+```{r}
+weight %>% 
+  select(weightpounds, fat, bmi) %>% 
+  summary()
+```
+
+The average weight is about 158.8lbs, average bmi is 25.19 (overweight),
+which is understandable as someone most likely to be tracking their
+weight would be someone who is overweight and trying to lose weight.
+
+#### Merging Data Sets
+
+```{r}
+merged_data <- merge(merge(daily_activity, sleep, by= c('id','date'), all= TRUE), weight, by = c('id', 'date'), all= TRUE)
+
+merged_activity_sleep <- merge(daily_activity, sleep, by=c('id','date'))
+```
+
+#### Removing Extra Variables
+
+```{r}
+merged_data <- merged_data %>% 
+  select(-c(trackerdistance, totalsleeprecords, weightkg, ismanualreport))
+
+merged_activity_sleep <- merged_activity_sleep %>% 
+  select(-c(trackerdistance, totalsleeprecords))
+```
+
+Creating a data set which shows the averages of the users steps,calories, and sleep.
+
+```{r}
+daily_average <- merged_activity_sleep %>% 
+  group_by(id) %>% 
+  summarise(average_daily_steps = mean(totalsteps), average_daily_calories = mean(calories), average_daily_sleep = mean(totalminutesasleep))
+
+average_steps <- daily_activity %>% 
+  group_by(id)
+```
+
+### Visualizations
+
+#### Understanding the User Data Base
+
+```{r, echo= FALSE}
+user_type <- daily_average %>% 
+  mutate(user_type = case_when(
+    average_daily_steps < 5000 ~ "sedentary",
+    average_daily_steps >= 5000 & average_daily_steps < 7499 ~ "lightly active",
+    average_daily_steps >= 7500 & average_daily_steps < 9999 ~ "fairly active", 
+    average_daily_steps >= 1000 ~ "very active"
+  ))
+
+user_type_percent <- user_type %>% 
+  group_by(user_type) %>% 
+  summarise(total = n()) %>% 
+  mutate(totals = sum(total)) %>% 
+  group_by(user_type) %>% 
+  summarise(total_percent = total/totals) %>% 
+  mutate(labels = scales:: percent(total_percent))
+
+user_type_percent$user_type <- factor(user_type_percent$user_type, levels = c("very active", "fairly active","lightly active", "sedentary"))
+```
+
+This pie chart then shows the different types of users based on activity:
+
+```{r, echo=FALSE}
+user_type_percent %>%
+  ggplot(aes(x="",y=total_percent, fill=user_type)) +
+  geom_bar(stat = "identity", width = 1)+
+  coord_polar("y", start=0)+
+  theme_minimal()+
+  theme(axis.title.x= element_blank(),
+        axis.title.y = element_blank(),
+        panel.border = element_blank(), 
+        panel.grid = element_blank(), 
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        plot.title = element_text(hjust = 0.5, size=14, face = "bold")) +
+  scale_fill_manual(values = c("#85e085","#e6e600", "#ffd480", "#ff8080")) +
+  geom_text(aes(label = labels),
+            position = position_stack(vjust = 0.5))+
+  labs(title="User type distribution")
+
+```
+
+Here we can see that a majority of users are actually within the fairly
+active category, with roughly equal parts of the other types of
+activity. **Bellabeat should aim to market towards people who are
+already quite active, as well as market towards people inclining towards
+improving their activity levels.**
+
+```{r, echo=FALSE}
+sleep_type <- daily_average %>% 
+  mutate(sleep_type = case_when(
+    average_daily_sleep < 360 ~ "poor",
+    average_daily_sleep >= 360 & average_daily_sleep < 420 ~ "average",
+    average_daily_sleep > 420 ~ "good"
+  ))
+
+sleep_type_percent <- sleep_type %>% 
+  group_by(sleep_type) %>% 
+  summarise(total = n()) %>% 
+  mutate(totals = sum(total)) %>% 
+  group_by(sleep_type) %>% 
+  summarise(total_percent = total/totals) %>% 
+  mutate(labels = scales:: percent(total_percent))
+
+sleep_type_percent$sleep_type <- factor(sleep_type_percent$sleep_type, levels = c("poor", "average","good"))
+
+sleep_user_type <- merge(sleep_type, user_type, by = "id") %>% 
+  select(-c("average_daily_steps.y", "average_daily_calories.y", "average_daily_sleep.y"))
+```
+
+The following pie chart differentiates users based on their sleep type.
+
+```{r, echo=FALSE}
+sleep_type_percent %>%
+  ggplot(aes(x="",y=total_percent, fill=sleep_type)) +
+  geom_bar(stat = "identity", width = 1)+
+  coord_polar("y", start=0)+
+  theme_minimal()+
+  theme(axis.title.x= element_blank(),
+        axis.title.y = element_blank(),
+        panel.border = element_blank(), 
+        panel.grid = element_blank(), 
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        plot.title = element_text(hjust = 0.5, size=14, face = "bold")) +
+  scale_fill_manual(values = c("red","green", "pink")) +
+  geom_text(aes(label = labels),
+            position = position_stack(vjust = 0.5))+
+  labs(title="Sleep type distribution")
+```
+
+From here we see that the average user gets good sleep, although a large
+portion of users get poor sleep. **Bellabeat can encourage better sleep
+health for its users, perhaps by notifying users when it is time to
+'wind down' or by giving users sleep tips to build better sleep
+habits.**
+
+The following bar graph shows the proportions of sleep types in the
+different user types.
+
+```{r, echo=FALSE}
+ggplot(sleep_user_type, aes(user_type, fill=sleep_type)) +
+  geom_bar() +
+labs(title="Proportion of Sleep Types amongst User Types", x= "user type", y= "proportion of sleep types")
+
+```
+
+Here we see that fairly active users make up a majority of people with
+'good' sleep, whereas poor sleep is relatively consistent amongst
+activity levels. Perhaps ***encouraging users to increase their activity
+levels will help their sleep trends***, although other factors may be at
+play such as time of activity, caffeine intake, caloric intake, etc.
+***Bellabeat should consider taking holistic data of their users to provide better
+individualized health tips.***
+
+#### Activity during the week
+
+Total Steps by day of the week
+
+```{r, echo=FALSE}
+merged_data %>% 
+  mutate(weekdays = weekdays(date)) %>% 
+  select(weekdays, totalsteps) %>% 
+  mutate(weekdays = factor(weekdays, levels = c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'))) %>% 
+  drop_na() %>% 
+  ggplot(aes(weekdays, totalsteps, fill = weekdays)) +
+  geom_boxplot()+
+  labs(title="Total Steps by Day of the Week", y= "total steps")
+```
+
+This box plot shows us the amount of activity one might get during the
+week, and specifically tells us that people in this data set are
+consistent throughout the week but more sedentary on Sundays.
+**Bellabeat can encourage user activity on these days, and encourage
+rest days on Sundays to provide its users with moderation and time to
+recuperate.**
+
+Calories burned by day of the week.
+
+```{r, echo=FALSE}
+merged_data %>% 
+  mutate(weekdays = weekdays(date)) %>% 
+  select(weekdays, calories) %>% 
+  mutate(weekdays = factor(weekdays, levels = c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'))) %>% 
+  drop_na() %>% 
+  ggplot(aes(weekdays, calories, fill = weekdays)) +
+  geom_boxplot() +
+  labs(title="Calories Burned by Day of the Week")
+```
+
+Again, this box plot reiterates that people are less inclined to workout
+on a Sunday, and more-so throughout the week.
+
+#### Sleep
+
+Sleep vs. Sedentary Minutes
+
+```{r, echo=FALSE}
+ggplot(data=merged_activity_sleep, aes(x=totalminutesasleep, y=sedentaryminutes)) + geom_point() + geom_smooth()+
+  labs(title="Sedentary Minutes vs. Total Minutes Asleep", x= "Total Minutes Asleep", y= "Sedentary Minutes")
+```
+
+The above graph shows us that more sedentary minutes may roughly
+correlate to less sleep. Taking our prior analysis from the user type
+distribution graphs, **Bellabeat should consider promoting and
+encouraging users with poor sleep to walk more or attain more daily
+physical activity.**
+
+lets compare with other activity types:
+
+```{r, echo=FALSE}
+merged_activity_sleep %>% 
+  filter(veryactiveminutes != 0, fairlyactiveminutes != 0, lightlyactiveminutes != 0) %>%
+  ggplot(aes(x=totalminutesasleep)) +
+  geom_smooth(aes(y=veryactiveminutes), color="blue") +
+  geom_smooth(aes(y=fairlyactiveminutes), color="red") +
+  geom_smooth(aes(y=lightlyactiveminutes), color="green") +
+  geom_smooth(aes(y=sedentaryminutes), color="purple")+
+  labs(title="Activity Levels vs. Total Minutes Asleep", x = "Total Minutes Asleep", y = "Activity Levels")+
+  annotate(geom="text",x=750, y=800, label="sedentary minutes")+
+  annotate(geom="text",x=700, y=350, label="lightly active minutes")+
+  annotate(geom="text",x=400, y=100, label="very active minutes")+
+  annotate(geom="text",x=400, y=-5, label="fairly active minutes")
+```
+
+Here we see that sedentary minutes are truly the biggest factor in total
+sleep.
+
+### Summarizing Recommendations
+
+A majority of fitness device users are already quite active. Bellabeat
+can market to this demographic by creating devices which would benefit
+those who are fairly active, **possibly by making lightweight fitness
+devices that will individuals track their health data without getting in
+the way of their workouts.** Bellabeat could also attempt to open up
+their market to those who are not currently active, by **creating
+advertisements which promote 'getting started' or 'jumping back into'
+their health and fitness journey.**
+
+Among this demographic, **Bellabeat might curate their device to make it
+on the users schedule.** By assessing the above data on weekly steps and
+caloric intake, **Bellabeat can encourage exercise throughout the week,
+and encourage rest or cheat days on Weekends (particularly Sunday).** By
+doing so, Bellabeat can market themselves as a self care app, **focused
+on creating a schedule that works for the individual.**
+
+Bellabeat can also work towards improving user's sleep trends **by
+encouraging daily walking or activity through notifications**, letting
+the user know how many steps they have left for the day or encouraging a
+workout when their device notices them being sedentary for an extended
+period of time.
+
+**Bellabeat can also use their app to post health recommendations or
+fitness blogs**, which can encourage more activity or better sleep
+habits.
