@@ -16,3 +16,47 @@ Analysis of Fitbit user data to uncover trends in smart device usage for Bellabe
 | Daily Activity | 81% of users track activity <3x/week | Opportunity for engagement features |
 | Sleep Patterns | 58% get <7hrs sleep | Highlight sleep tracking in marketing |
 | Device Usage | Peak usage at 6-8PM | Optimal time for notifications |
+
+## 🛠️ Technical Approach
+```r
+# Sample code from analysis
+daily_activity %>% 
+  group_by(weekday) %>% 
+  summarize(avg_steps = mean(steps)) %>% 
+  ggplot(aes(x = weekday, y = avg_steps)) +
+  geom_col(fill = "#4E79A7")
+Methods Used:
+
+Data cleaning with dplyr
+
+Time-series decomposition
+
+Correlation analysis
+
+Tableau dashboard development
+
+Files
+/data/processed: Cleaned datasets (CSV)
+
+/analysis: R Markdown files
+
+/output: Visualizations and final report
+
+Business Recommendations
+Develop sleep-focused reminders
+
+Create evening workout challenges
+
+Implement "streak" gamification for consistency
+
+How to Run
+Clone repository
+
+Open bellabeat_analysis.Rmd in RStudio
+
+Install required packages:
+
+r
+Copy
+install.packages(c("tidyverse", "lubridate", "ggplot2"))
+Knit to HTML/PDF
