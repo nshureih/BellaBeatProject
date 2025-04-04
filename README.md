@@ -37,9 +37,9 @@ Copy
 ```
 
 ## Recommendations
--Develop sleep quality scoring metrics
--Implement evening engagement features
--Create consistency incentives
+- Develop sleep quality scoring metrics
+- Implement evening engagement features
+- Create consistency incentives
 
 ## Contact
 For professional inquiries:
