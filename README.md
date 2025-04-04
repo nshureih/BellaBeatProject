@@ -22,7 +22,7 @@ activity_summary <- raw_data %>%
   summarize(avg_steps = mean(steps))
 ```
 
-##Methods:
+## Methods:
 - Data cleaning with tidyverse
 - Time-series decomposition
 - Correlation analysis
@@ -36,11 +36,11 @@ Copy
 /output        # Generated visualizations and reports
 ```
 
-##Recommendations
+## Recommendations
 -Develop sleep quality scoring metrics
 -Implement evening engagement features
 -Create consistency incentives
 
-##Contact
+## Contact
 For professional inquiries:
 nadia.shureih@gmail.com | [LinkedIn](https://www.linkedin.com/in/nadia-shureih-5287b6284/)
