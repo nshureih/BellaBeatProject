@@ -6,7 +6,7 @@
 Analysis of Fitbit user data to identify behavioral trends for Bellabeat's wellness products. Focus areas include activity patterns, sleep quality, and device engagement metrics.
 
 [View Full Analysis Report](https://nshureih.github.io/BellaBeatProject/)  
-[LinkedIn Profile]([(https://www.linkedin.com/in/nadia-shureih-5287b6284/)) *(replace with your actual LinkedIn URL)*
+[LinkedIn Profile]((https://www.linkedin.com/in/nadia-shureih-5287b6284/))
 
 ## Key Insights
 - **Activity Frequency**: 81% of users tracked activity fewer than 3 times per week
